@@ -181,6 +181,19 @@ original branding. **The AI agent must invent the name itself** — pick a short
 puzzle game, "Pocket Golf" for a mini-golf game). Do not ask the user to name
 it; propose it in the final report.
 
+**MANDATORY — Uniqueness check before committing to a name**: before picking
+the name, list the repos on BOTH publishing accounts and make sure the game
+hasn't already been cleaned/published under that name (or a name too similar
+to it):
+
+- `dannyking6`  → `gh api users/dannyking6/repos?per_page=100 --jq '.[].name'`
+- `d2658182-hub` → `gh api users/d2658182-hub/repos?per_page=100 --jq '.[].name'`
+
+If a repo (or a previous build folder in the workspace) already matches the
+candidate name or the same original game, reuse that existing work instead of
+deploying a duplicate — and pick a different candidate name if the collision
+is on the *name* itself. The name must be unique across both accounts.
+
 1. **Find the title asset** (one of):
    - dedicated logo file (`logo_main`, `game-logo.png`, `title.png`…)
    - a frame inside a texture atlas (grep the atlas JSON for `title`/`logo`)
