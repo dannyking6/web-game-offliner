@@ -21,6 +21,8 @@ Phase 1  DOWNLOAD    → full asset pull + integrity audit
 Phase 2  PATCH       → SDK extraction → neutral game-driver.js
 Phase 3  VALIDATE    → Playwright + application firewall
 Phase 4  DEPLOY      → GitHub repo + Pages + ZIP release v1.0.0
+Phase 5  RETITLE     → AI picks a new short catchy name, generates a styled
+                       title image, updates metadata, republishes repo+release
 ```
 
 Never skip Phase 3: "it loads locally" is not "it works offline".
@@ -170,6 +172,47 @@ Run **all** of these; each has caught real bugs:
 5. **serve.sh**: tiny script `python3 -m http.server "$PORT" --bind 0.0.0.0`
    (games need HTTP; `file://` won't work).
 6. **Release v1.0.0** with the ZIP as asset via `gh release create`.
+
+## Phase 5 — Retitle the game (MANDATORY for every published game)
+
+Every deployed game gets a **new original title**: never ship the portal's
+original branding. **The AI agent must invent the name itself** — pick a short
+(2 words max), catchy, genre-fitting name (e.g. "Frosty Rush" for a snowman
+puzzle game, "Pocket Golf" for a mini-golf game). Do not ask the user to name
+it; propose it in the final report.
+
+1. **Find the title asset** (one of):
+   - dedicated logo file (`logo_main`, `game-logo.png`, `title.png`…)
+   - a frame inside a texture atlas (grep the atlas JSON for `title`/`logo`)
+   - a font-rendered Text object in the scene data (then edit the string + font)
+2. **Generate the title image** with PIL — requirements learned the hard way:
+   - **Size the text with stroke metrics included**: `textbbox(..., stroke_width=n)`
+     WITHOUT the stroke understates width by ~20px/char and the title gets
+     clipped at the edges (a real bug that hid the P and F of a title).
+   - **Advance letters with `font.getlength()`**, never with per-letter bbox
+     sums — per-letter bbox widths overflow the measured string bbox.
+   - Auto-fit with a binary search on font size against `canvas_w - 2*margin`;
+     assert the alpha bbox stays inside the canvas before saving.
+   - Style: per-letter color palette or vertical gradient (NOT plain white),
+     dark outline, blurred drop shadow, gloss highlight on the top half.
+     Compose layers with `Image.alpha_composite` — `ImageDraw` on RGBA
+     REPLACES pixels instead of blending (a fill with alpha 0 erased a whole
+     gradient once).
+   - Render at 2× then LANCZOS-downscale to the exact original sprite dims.
+3. **Patch the engine**:
+   - Construct 3: replace the PNG frames, keep `data.js` untouched (dims must match).
+   - Phaser/PixiJS atlas: either redraw the frame region in the atlas PNG, or
+     (cleaner) add a standalone image, `load.image()` it in the loader, and
+     repoint the title object (`this.titleImg = ...`) to the new texture key.
+4. **Update all metadata**: `<title>` + `meta[name=application-name]` in
+   index.html, PWA manifest `name`/`short_name`, `GameData.BuildTitle`-style
+   constants in game.js, i18n strings that embed the old name.
+5. **Verify** the full title renders (pixel-scan the title zone for the palette
+   colors reaching both left and right edges) and 0 console errors.
+6. **Republish EVERYTHING**: push to the repo (Pages rebuilds), wait for the
+   CDN to serve the new files, AND **create a new release** (v1.0.1, v1.0.2…)
+   with a fresh ZIP — existing GitHub releases are immutable, so a retitle is
+   never done until a new release carries the new build.
 
 ## Hard-won gotchas (read before debugging)
 
