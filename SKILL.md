@@ -163,6 +163,16 @@ Run **all** of these; each has caught real bugs:
 2. **GitHub repo** (one per game), push, enable **Pages via API**
    (`gh api repos/<owner>/<repo>/pages -X POST`), wait for the Pages build
    (poll the API until `status: built`).
+   **Repo naming rule — MANDATORY**: the repo name MUST be the **original
+   game's name** (the portal's game id, kebab-case: `drive-mad`,
+   `picnic-penguin`, `smarty-bubbles`…). No prefix, no suffix, no `-offline`.
+   ⚠️ Do NOT confuse this repo with this skill's own repo
+   (`web-game-offliner`): never create, fork over, or overwrite a repo named
+   `web-game-offliner` when publishing a game. The repo name is also
+   independent of Phase 5's invented title: retitle the *game*, keep the
+   *repo* on the original name (`<owner>.github.io/<original-name>/` URLs
+   are fine). Only fall back to the Phase 5 title as repo name if the
+   original game has no usable identifier at all.
 3. **Live verification**: Playwright against the GitHub Pages URL — 0 errors,
    0 third-party requests, game advances past menus.
 4. **README.md** with: flattering game description, **controls table per
@@ -180,6 +190,10 @@ original branding. **The AI agent must invent the name itself** — pick a short
 (2 words max), catchy, genre-fitting name (e.g. "Frosty Rush" for a snowman
 puzzle game, "Pocket Golf" for a mini-golf game). Do not ask the user to name
 it; propose it in the final report.
+
+> **Scope note**: the invented title replaces the **in-game branding only**
+> (assets + metadata). Per Phase 4's repo-naming rule, the GitHub repo still
+> keeps the **original game's name** — do not rename the repo to the new title.
 
 **MANDATORY — Uniqueness check before committing to a name**: before picking
 the name, list the repos on BOTH publishing accounts and make sure the game
