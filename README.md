@@ -17,6 +17,8 @@ Phase 1  DOWNLOAD    full asset pull + integrity audit (magic bytes!)
 Phase 2  PATCH       SDK extraction → neutral game-driver.js
 Phase 3  VALIDATE    Playwright + network firewall + mobile emulation
 Phase 4  DEPLOY      GitHub repo + Pages + README + ZIP release v1.0.0
+Phase 5  RETITLE     sweep EVERY screen for the old title, remove/replace it
+                     everywhere, invent a new name, styled title, republish
 ```
 
 Every phase encodes the hard-won gotchas that break naive attempts:
@@ -26,6 +28,9 @@ Every phase encodes the hard-won gotchas that break naive attempts:
 - ✅ 404-HTML-disguised-as-PNG detection via magic bytes
 - ✅ Atlas resizing for mobile GPU 2048px texture limits
 - ✅ Crash-dialog auto-recovery for transient WebGL/audio glitches
+- ✅ Old-title removal on **every screen** (splash, menu, level select,
+  settings, pause, game over, credits…) — grep the whole build for the old
+  name, assert 0 hits, verify screen by screen in Playwright
 - ✅ Live-URL verification after Pages build, not just local testing
 
 ## Install

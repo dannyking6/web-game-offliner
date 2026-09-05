@@ -1,7 +1,7 @@
 ---
 name: web-game-offliner
 description: Download any 2D web game (GameSnacks, Famobi, Softgames, etc.), strip its platform SDK, patch it into a fully self-contained offline build with a neutral driver, validate it with Playwright plus an application-level firewall, then deploy it to GitHub Pages and publish a clean ZIP release. Use when the user asks to localize, offline-ify, self-host, mirror, de-SDK, or republish a browser game.
-version: 1.0.0
+version: 1.1.0
 author: buffy
 tags: [games, offline, download, playwright, github-pages, game-snacks]
 ---
@@ -21,8 +21,9 @@ Phase 1  DOWNLOAD    → full asset pull + integrity audit
 Phase 2  PATCH       → SDK extraction → neutral game-driver.js
 Phase 3  VALIDATE    → Playwright + application firewall
 Phase 4  DEPLOY      → GitHub repo + Pages + ZIP release v1.0.0
-Phase 5  RETITLE     → AI picks a new short catchy name, generates a styled
-                       title image, updates metadata, republishes repo+release
+Phase 5  RETITLE     → sweep EVERY screen for the old title, remove/replace it
+                       everywhere, AI picks a new short catchy name, generates
+                       a styled title image, updates metadata, republishes
 ```
 
 Never skip Phase 3: "it loads locally" is not "it works offline".
@@ -191,6 +192,14 @@ original branding. **The AI agent must invent the name itself** — pick a short
 puzzle game, "Pocket Golf" for a mini-golf game). Do not ask the user to name
 it; propose it in the final report.
 
+**ALL-OR-NOTHING RULE (zero tolerance)**: removing and replacing the old title
+is mandatory, and it applies to **every screen of the game**, not just the
+first one. A build where the new title shows on the splash screen while the
+old name/logo survives anywhere else (menu, level select, settings, pause,
+game over, credits…) is a **FAILED build**. When this skill ships a game, the
+old title must be completely gone: no asset, no string, no metadata, on any
+screen.
+
 > **Scope note**: the invented title replaces the **in-game branding only**
 > (assets + metadata). Per Phase 4's repo-naming rule, the GitHub repo still
 > keeps the **original game's name** — do not rename the repo to the new title.
@@ -208,10 +217,25 @@ candidate name or the same original game, reuse that existing work instead of
 deploying a duplicate — and pick a different candidate name if the collision
 is on the *name* itself. The name must be unique across both accounts.
 
-1. **Find the title asset** (one of):
-   - dedicated logo file (`logo_main`, `game-logo.png`, `title.png`…)
-   - a frame inside a texture atlas (grep the atlas JSON for `title`/`logo`)
-   - a font-rendered Text object in the scene data (then edit the string + font)
+1. **Sweep ALL screens for the old title (do this FIRST)** — never assume the
+   title lives in one place: portals routinely brand several screens. Enumerate
+   every screen/state the game has — boot/preloader, splash, main menu, level
+   select, settings, pause, game over, credits/about — and for each one hunt
+   the old title in:
+   - dedicated logo files (`logo_main`, `game-logo.png`, `title.png`…)
+   - frames inside texture atlases (grep the atlas JSON for
+     `title`/`logo`/`splash`)
+   - font-rendered Text objects in scene data (grep the code + scene JSON for
+     the old name and its misspellings), then replace the string + font
+   - i18n/locale strings, HTML overlays, CSS background images, PWA manifest,
+     `<title>`/meta tags
+   - credits, "About", settings and game-over screens: statistically the most
+     forgotten ones — always open them and look
+   **Decision rule**: if the old title appears on MORE THAN ONE screen, it
+   must be completely removed or replaced on EVERY one of those screens.
+   Write down the list of screens where it appears — step 5 verifies each one
+   individually. Removing the asset but leaving the string (or vice versa)
+   does not count as removed.
 2. **Generate the title image** with PIL — requirements learned the hard way:
    - **Size the text with stroke metrics included**: `textbbox(..., stroke_width=n)`
      WITHOUT the stroke understates width by ~20px/char and the title gets
@@ -226,7 +250,7 @@ is on the *name* itself. The name must be unique across both accounts.
      REPLACES pixels instead of blending (a fill with alpha 0 erased a whole
      gradient once).
    - Render at 2× then LANCZOS-downscale to the exact original sprite dims.
-3. **Patch the engine**:
+3. **Patch the engine — on EVERY screen found in step 1, not just the menu**:
    - Construct 3: replace the PNG frames, keep `data.js` untouched (dims must match).
    - Phaser/PixiJS atlas: either redraw the frame region in the atlas PNG, or
      (cleaner) add a standalone image, `load.image()` it in the loader, and
@@ -234,8 +258,16 @@ is on the *name* itself. The name must be unique across both accounts.
 4. **Update all metadata**: `<title>` + `meta[name=application-name]` in
    index.html, PWA manifest `name`/`short_name`, `GameData.BuildTitle`-style
    constants in game.js, i18n strings that embed the old name.
-5. **Verify** the full title renders (pixel-scan the title zone for the palette
-   colors reaching both left and right edges) and 0 console errors.
+5. **Verify the retitle is COMPLETE — screen by screen**:
+   - for EVERY screen listed in step 1: navigate to it in Playwright,
+     screenshot it, and confirm the NEW title renders correctly (pixel-scan
+     the title zone for the palette colors reaching both left and right
+     edges) AND that no old-title pixels remain;
+   - grep the ENTIRE shipped build (HTML/JS/JSON/CSS, case-insensitive) for
+     the old game name — assert **0 hits**;
+   - open the screens players rarely see (credits, about, settings, game
+     over): a rebrand that misses one of them is not done;
+   - 0 console errors throughout.
 6. **Republish EVERYTHING**: push to the repo (Pages rebuilds), wait for the
    CDN to serve the new files, AND **create a new release** (v1.0.1, v1.0.2…)
    with a fresh ZIP — existing GitHub releases are immutable, so a retitle is
@@ -260,6 +292,10 @@ is on the *name* itself. The name must be unique across both accounts.
 - **Autoplay policy**: always launch tests with
   `--autoplay-policy=no-user-gesture-required` but ALSO test without it under
   mobile emulation.
+- **The old title hides on several screens**: splash, menu, level select,
+  settings, pause, game over, credits… Replacing only the first screen ships
+  the old branding to every player who opens the credits. Sweep every screen,
+  then verify screen by screen (Phase 5, steps 1 and 5).
 
 ## Reference implementation
 
